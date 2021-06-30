@@ -15,6 +15,7 @@ defmt-rtt = "0.2.0"
 panic-probe = { version = "0.2.0", features = ["print-defmt"] }
 nrf52840-hal = "0.12.2"
 panic-halt = "0.2.0"
+embassy-nrf = { path = "contrib/embassy/embassy-nrf", features = ["nrf52840"] }
 
 [features]
 # set logging levels here
