@@ -5,7 +5,39 @@ edition = "2018"
 version = "0.1.0"
 
 [workspace]
-members = ["testsuite"]
+resolver = "2"
+
+members = [
+    "testsuite",
+    "contrib/embassy/embassy",
+    "contrib/embassy/embassy-traits",
+    "contrib/embassy/embassy-macros",
+    "contrib/embassy/embassy-extras",
+
+    # Uncomment ONLY ONE of the groups below.
+
+    # nRF
+    "contrib/embassy/embassy-nrf",
+    "contrib/embassy/examples/nrf",
+
+    # stm32
+    #"embassy-stm32",
+    #"stm32-metapac",
+    # uncomment ONLY ONE example crate.
+    #"examples/stm32f4",
+    #"examples/stm32h7",
+    #"examples/stm32l0",
+    #"examples/stm32wb55",
+
+    # rp2040
+    #"embassy-rp",
+    #"examples/rp",
+
+    # std
+    #"embassy-std",
+    #"examples/std",
+]
+
 
 [dependencies]
 cortex-m = "0.7.1"
@@ -16,6 +48,7 @@ panic-probe = { version = "0.2.0", features = ["print-defmt"] }
 nrf52840-hal = "0.12.2"
 panic-halt = "0.2.0"
 embassy-nrf = { path = "contrib/embassy/embassy-nrf", features = ["nrf52840"] }
+embassy = { path = "contrib/embassy/embassy" }
 
 [features]
 # set logging levels here

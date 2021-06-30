@@ -2,8 +2,8 @@
 #![no_main]
 
 use cortex_m_rt::entry;
-use panic_halt as _;
-use nrf52840_hal::pac as _; // memory layout
+use nrf52840_hal::pac as _;
+use panic_halt as _; // memory layout
 
 #[entry]
 fn main() -> ! {
