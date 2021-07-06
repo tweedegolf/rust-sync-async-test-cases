@@ -55,6 +55,8 @@ ccs811-async = { version = "0.2.0", path = "contrib/ccs811-async", features = ["
 lis3dh = { path = "contrib/lis3dh" }
 
 sha-1 = { version = "0.9.6", features = [], default-features = false } 
+nb = "1.0.0"
+futures = { version = "0.3.8", default-features = false, features = ["async-await"] }
 
 [features]
 # set logging levels here
