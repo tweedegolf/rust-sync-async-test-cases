@@ -15,6 +15,8 @@ members = [
     "contrib/embassy/embassy-extras",
 
     # Uncomment ONLY ONE of the groups below.
+    "contrib/lis3dh",
+    "contrib/ccs811-async",
 
     # nRF
     "contrib/embassy/embassy-nrf",
@@ -49,6 +51,10 @@ nrf52840-hal = "0.12.2"
 panic-halt = "0.2.0"
 embassy-nrf = { path = "contrib/embassy/embassy-nrf", features = ["nrf52840"] }
 embassy = { path = "contrib/embassy/embassy" }
+ccs811-async = { version = "0.2.0", path = "contrib/ccs811-async", features = ["defmt"] }
+lis3dh = { path = "contrib/lis3dh" }
+
+sha-1 = { version = "0.9.6", features = [], default-features = false } 
 
 [features]
 # set logging levels here

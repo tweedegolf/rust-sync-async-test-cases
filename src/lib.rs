@@ -1,5 +1,8 @@
 #![no_std]
 
+pub mod ram_persisted;
+pub mod test_case_common;
+
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 use defmt_rtt as _; // global logger
