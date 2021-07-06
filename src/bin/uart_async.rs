@@ -6,7 +6,7 @@
 #![allow(incomplete_features)]
 
 use embassy::executor::Spawner;
-use embassy::traits::uart::{Read, Write};
+use embassy::traits::uart::Write;
 use embassy_nrf::gpio::NoPin;
 use embassy_nrf::{interrupt, uarte, Peripherals};
 

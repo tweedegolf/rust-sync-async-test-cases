@@ -1,8 +1,6 @@
 #![no_std]
 #![no_main]
 
-use core::mem::MaybeUninit;
-
 use cortex_m_rt::entry;
 use hal::{
     gpio::{p0::Parts, Level},
@@ -12,8 +10,6 @@ use hal::{
 };
 use nrf52840_hal as hal;
 use panic_halt as _;
-
-static mut ENDTX: bool = true;
 
 #[entry]
 fn main() -> ! {
