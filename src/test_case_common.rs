@@ -1,7 +1,5 @@
-
 use embassy_nrf::gpio::{Level, Output};
 use embassy_nrf::twim;
-
 
 use ccs811_async::{Ccs811, MeasurementMode, SlaveAddr};
 
@@ -11,8 +9,8 @@ pub type SensorCcs811<'a> = Ccs811<
     ccs811_async::mode::App,
 >;
 
-pub type SensorLis3dh<'a> = lis3dh::asynci2c::Lis3dh<twim::Twim<'a, embassy_nrf::peripherals::TWISPI1>>;
-
+pub type SensorLis3dh<'a> =
+    lis3dh::asynci2c::Lis3dh<twim::Twim<'a, embassy_nrf::peripherals::TWISPI1>>;
 
 pub fn go_to_sleep() -> ! {
     let sense_when_goes_to = Level::Low;
@@ -33,7 +31,10 @@ pub fn go_to_sleep() -> ! {
     }
 }
 
-pub async fn init_lis3dh(twim: twim::Twim<'_, embassy_nrf::peripherals::TWISPI1>) -> SensorLis3dh<'_> {
+pub async fn init_lis3dh(
+    twim: twim::Twim<'_, embassy_nrf::peripherals::TWISPI1>,
+) -> SensorLis3dh<'_> {
+    defmt::info!("making a new lis3dh");
     use lis3dh::asynci2c::Lis3dh;
     use lis3dh::{Configuration, DataRate, SlaveAddr};
     let config = Configuration {
@@ -132,7 +133,6 @@ pub fn configure_sense_pin(id: usize, sense_when_goes_to: Level) {
 
 // fn configure_ram(_: nrf52840_hal::pac::POWER) {
 pub fn configure_ram() {
-
     let block = unsafe { &*nrf52840_hal::pac::POWER::ptr() };
 
     block.ram7.power.write(|w| w.s1retention().on());

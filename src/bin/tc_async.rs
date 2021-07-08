@@ -32,24 +32,29 @@ async fn main(_spawner: Spawner, p: Peripherals) {
     // retain the `.foobar` section
     configure_ram();
 
-    let ccs_awake_because_int = {
+    let (ccs_awake_because_int, lis3dh_awake_because_int) = {
+        use nrf52840_hal::prelude::InputPin;
+
+        let wait = {
+            let p0_register_block = nrf52840_hal::pac::P0::ptr();
+            0 == unsafe { (*p0_register_block).latch.read().bits() }
+        };
+
         let p = unsafe { nrf52840_hal::pac::Peripherals::steal() };
+
         let pins = nrf52840_hal::gpio::p0::Parts::new(p.P0);
 
-        let int = pins.p0_31.into_pulldown_input();
+        let int_ccs = pins.p0_31.into_pulldown_input();
+        let int_lis3dh = pins.p0_02.into_pullup_input();
 
-        use nrf52840_hal::prelude::InputPin;
-        int.is_low().unwrap()
-    };
+        // time to configure the pin
+        // experimentally, it takes about 5us to switch states. At
+        // 64MHz, that's 64e6 ticks per second * 5e-6 seconds = 320 ticks
+        if wait {
+            cortex_m::asm::delay(320);
+        }
 
-    let lis3dh_awake_because_int = {
-        let p = unsafe { nrf52840_hal::pac::Peripherals::steal() };
-        let pins = nrf52840_hal::gpio::p0::Parts::new(p.P0);
-
-        let int = pins.p0_02.into_pulldown_input();
-
-        use nrf52840_hal::prelude::InputPin;
-        int.is_high().unwrap()
+        (int_ccs.is_low().unwrap(), int_lis3dh.is_high().unwrap())
     };
 
     let lis3dh_data_ready_channel = InputChannel::new(
@@ -119,6 +124,12 @@ async fn main(_spawner: Spawner, p: Peripherals) {
 
     let lis3dh_init_task = async {
         let cached_sensor = unsafe { LIS3DH_BOX.async_take_with_default(init_from_scratch).await };
+
+        //        match cached_sensor {
+        //            Cached::Cached(_) => defmt::info!("lis3dh: cached"),
+        //            Cached::StillInitializing(_) => defmt::info!("lis3dh: still initing"),
+        //            Cached::Fresh(_) => defmt::info!("lis3dh: fresh"),
+        //        };
 
         match cached_sensor {
             Cached::Cached(sensor) | Cached::Fresh(sensor) | Cached::StillInitializing(sensor) => {
