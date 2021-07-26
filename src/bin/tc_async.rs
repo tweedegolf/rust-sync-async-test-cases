@@ -179,7 +179,7 @@ async fn main(_spawner: Spawner, p: Peripherals) {
                         CCS811_BOX.unsafe_put_back();
                     }
 
-                    go_to_sleep()
+                    go_do_sleep()
                 }
                 Err(_) => panic!("Error while retrieving data {:?}", ()),
             };

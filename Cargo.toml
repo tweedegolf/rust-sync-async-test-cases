@@ -53,6 +53,8 @@ embassy-nrf = { path = "contrib/embassy/embassy-nrf", features = ["nrf52840"] }
 embassy = { path = "contrib/embassy/embassy" }
 ccs811-async = { version = "0.2.0", path = "contrib/ccs811-async", features = ["defmt"] }
 lis3dh = { path = "contrib/lis3dh" }
+embedded-ccs811 = "0.2.0"
+accelerometer = "0.12.0"
 
 sha-1 = { version = "0.9.6", features = [], default-features = false } 
 nb = "1.0.0"

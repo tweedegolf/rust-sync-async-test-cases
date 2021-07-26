@@ -9,8 +9,17 @@ pub type SensorCcs811<'a> = Ccs811<
     ccs811_async::mode::App,
 >;
 
+pub type SyncSensorCcs811<'a> = embedded_ccs811::Ccs811<
+    nrf52840_hal::twim::Twim<nrf52840_hal::pac::TWIM0>,
+    nrf52840_hal::gpio::Pin<nrf52840_hal::gpio::Output<nrf52840_hal::gpio::PushPull>>,
+    nrf52840_hal::Delay,
+    embedded_ccs811::mode::App,
+>;
+
 pub type SensorLis3dh<'a> =
     lis3dh::asynci2c::Lis3dh<twim::Twim<'a, embassy_nrf::peripherals::TWISPI1>>;
+
+pub type SyncSensorLis3dh = lis3dh::i2c::Lis3dh<nrf52840_hal::twim::Twim<nrf52840_hal::pac::TWIM1>>;
 
 pub fn go_to_sleep() -> ! {
     let sense_when_goes_to = Level::Low;

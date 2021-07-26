@@ -36,6 +36,11 @@ impl<T> RamPersisted<T> {
         }
     }
 
+    pub unsafe fn take(&mut self) -> &'static mut T {
+        // value is initialized, magic word is cleared
+        &mut *self.bytes.as_mut_ptr()
+    }
+
     pub async fn async_take_with_default<F, G>(
         &mut self,
         init_from_scratch: F,
