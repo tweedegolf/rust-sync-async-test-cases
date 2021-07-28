@@ -19,6 +19,7 @@ use embassy_nrf::{interrupt, Peripherals};
 use ccs811_async::SlaveAddr;
 
 use sleepy_test_case::ram_persisted::{Cached, RamPersisted};
+use sleepy_test_case::test_case_common_async::*;
 use sleepy_test_case::test_case_common::*;
 
 #[link_section = ".foobar"]
@@ -179,7 +180,7 @@ async fn main(_spawner: Spawner, p: Peripherals) {
                         CCS811_BOX.unsafe_put_back();
                     }
 
-                    go_do_sleep()
+                    go_to_sleep()
                 }
                 Err(_) => panic!("Error while retrieving data {:?}", ()),
             };

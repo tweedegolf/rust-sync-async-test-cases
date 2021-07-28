@@ -1,6 +1,8 @@
 #![no_std]
 
 pub mod ram_persisted;
+#[cfg(feature="async")]
+pub mod test_case_common_async;
 pub mod test_case_common;
 
 use core::sync::atomic::{AtomicUsize, Ordering};

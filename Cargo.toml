@@ -49,22 +49,30 @@ defmt-rtt = "0.2.0"
 panic-probe = { version = "0.2.0", features = ["print-defmt"] }
 nrf52840-hal = "0.12.2"
 panic-halt = "0.2.0"
-embassy-nrf = { path = "contrib/embassy/embassy-nrf", features = ["nrf52840"] }
-embassy = { path = "contrib/embassy/embassy" }
-ccs811-async = { version = "0.2.0", path = "contrib/ccs811-async", features = ["defmt"] }
-lis3dh = { path = "contrib/lis3dh" }
+embassy-nrf = { path = "contrib/embassy/embassy-nrf", features = ["nrf52840"], optional = true }
+embassy = { path = "contrib/embassy/embassy", optional = true }
+ccs811-async = { version = "0.2.0", path = "contrib/ccs811-async", features = ["defmt"], optional = true }
+
 embedded-ccs811 = "0.2.0"
 accelerometer = "0.12.0"
 
 sha-1 = { version = "0.9.6", features = [], default-features = false } 
 nb = "1.0.0"
 futures = { version = "0.3.8", default-features = false, features = ["async-await"] }
+lis3dh = {path = "contrib/lis3dh"}
 
 [features]
 # set logging levels here
 default = [
   "defmt-default",
   # "dependency-a/defmt-trace",
+]
+
+async = [
+  "embassy",
+  "embassy-nrf",
+  "ccs811-async",
+  "lis3dh/async"
 ]
 
 # do NOT modify these features
@@ -120,3 +128,13 @@ overflow-checks = false # <-
 # defmt-rtt = { git = "https://github.com/knurling-rs/defmt", rev = "use defmt version reported by `probe-run --version`" }
 # defmt-test = { git = "https://github.com/knurling-rs/defmt", rev = "use defmt version reported by `probe-run --version`" }
 # panic-probe = { git = "https://github.com/knurling-rs/defmt", rev = "use defmt version reported by `probe-run --version`" }
+
+[[bin]]
+name = "tc_async"
+path = "src/bin/tc_async.rs"
+required-features = ["async"]
+
+[[bin]]
+name = "uart_async"
+path = "src/bin/uart_async.rs"
+required-features = ["async"]

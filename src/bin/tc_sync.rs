@@ -273,7 +273,7 @@ unsafe fn GPIOTE() {
         if gpiote.channel0().is_event_triggered() {
             let ccs811 = CCS811_BOX.take();
             match ccs811.data() {
-                Err(_) => defmt::info!("error?"),
+                Err(_) => (),
                 Ok(_data) => {
                     // defmt::info!("eCO2: {}, eTVOC: {}", data.eco2, data.etvoc);
                     gpiote.channel0().reset_events();
