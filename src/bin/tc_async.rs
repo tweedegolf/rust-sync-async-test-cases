@@ -19,8 +19,8 @@ use embassy_nrf::{interrupt, Peripherals};
 use ccs811_async::SlaveAddr;
 
 use sleepy_test_case::ram_persisted::{Cached, RamPersisted};
-use sleepy_test_case::test_case_common_async::*;
 use sleepy_test_case::test_case_common::*;
+use sleepy_test_case::test_case_common_async::*;
 
 #[link_section = ".foobar"]
 static mut CCS811_BOX: RamPersisted<SensorCcs811<'static>> = RamPersisted::new();

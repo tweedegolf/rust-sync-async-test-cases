@@ -77,4 +77,3 @@ pub async fn init_ccs<'a>(
         .unwrap();
     sensor
 }
-
