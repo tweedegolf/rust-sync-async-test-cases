@@ -3,17 +3,15 @@
 
 use core::{
     mem::MaybeUninit,
-    sync::atomic::{AtomicBool, AtomicU32, Ordering},
+    sync::atomic::{AtomicBool, Ordering},
 };
 
 use cortex_m_rt::entry;
 use hal::{
-    gpio::{p0::Parts, Level},
     pac::{self, interrupt, Interrupt, NVIC},
     prelude::*,
     timer::Periodic,
-    uarte::{Baudrate, Parity, Pins},
-    Timer, Uarte,
+    Timer,
 };
 use nrf52840_hal as hal; // memory layout
 use panic_halt as _;
@@ -61,7 +59,7 @@ fn main() -> ! {
 fn TIMER0() {
     let timer0 = unsafe { &*TIMER0_HANDLE.as_ptr() };
     if timer0.event_compare_cc0().read().bits() != 0x00u32 {
-        let n = TIMER0_FIRED.store(true, Ordering::Relaxed);
+        TIMER0_FIRED.store(true, Ordering::Relaxed);
         timer0.event_compare_cc0().write(|w| unsafe { w.bits(0) })
     }
 }
