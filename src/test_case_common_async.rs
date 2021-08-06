@@ -1,4 +1,4 @@
-use embassy_nrf::gpio::{Level, Output};
+use embassy_nrf::gpio::Output;
 use embassy_nrf::twim;
 
 use ccs811_async::{Ccs811, MeasurementMode, SlaveAddr};
