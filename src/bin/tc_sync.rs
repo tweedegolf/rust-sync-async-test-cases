@@ -58,14 +58,6 @@ fn main() -> ! {
         (int_ccs.is_low().unwrap(), int_lis3dh.is_high().unwrap())
     };
 
-    if ccs_awake_because_int {
-        port0.p0_13.into_push_pull_output(Level::Low);
-    }
-
-    if lis3dh_awake_because_int {
-        port0.p0_14.into_push_pull_output(Level::Low);
-    }
-
     let twim0_scl = port0.p0_28.into_floating_input().degrade();
     let twim0_sda = port0.p0_29.into_floating_input().degrade();
     let twim0 = twim::Twim::new(
