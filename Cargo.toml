@@ -49,7 +49,7 @@ defmt-rtt = "0.2.0"
 panic-probe = { version = "0.2.0", features = ["print-defmt"] }
 nrf52840-hal = "0.12.2"
 panic-halt = "0.2.0"
-embassy-nrf = { path = "contrib/embassy/embassy-nrf", features = ["nrf52840"], optional = true }
+embassy-nrf = { path = "contrib/embassy/embassy-nrf", features = ["nrf52840"], optional = true, default-features = false }
 embassy = { path = "contrib/embassy/embassy", optional = true }
 ccs811-async = { version = "0.2.0", path = "contrib/ccs811-async", features = ["defmt"], optional = true }
 
@@ -64,7 +64,7 @@ lis3dh = {path = "contrib/lis3dh"}
 [features]
 # set logging levels here
 default = [
-  "defmt-default",
+  # "defmt-default",
   # "dependency-a/defmt-trace",
 ]
 

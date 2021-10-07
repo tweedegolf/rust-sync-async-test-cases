@@ -15,7 +15,6 @@ pub type SensorLis3dh<'a> =
 pub async fn init_lis3dh(
     twim: twim::Twim<'_, embassy_nrf::peripherals::TWISPI1>,
 ) -> SensorLis3dh<'_> {
-    defmt::info!("making a new lis3dh");
     use lis3dh::asynci2c::Lis3dh;
     use lis3dh::{Configuration, DataRate, SlaveAddr};
     let config = Configuration {
