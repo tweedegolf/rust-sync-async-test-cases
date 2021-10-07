@@ -1,5 +1,5 @@
 [package]
-authors = ["Henk Dieter Oordt <hd@oordt.dev>", "Folkert de Vries <folkert@tweedegolf.com>"]
+authors = ["Henk Oordt <hd@oordt.dev>", "Folkert de Vries <folkert@tweedegolf.com>"]
 name = "sleepy-test-case"
 edition = "2018"
 version = "0.1.0"
@@ -8,7 +8,6 @@ version = "0.1.0"
 resolver = "2"
 
 members = [
-    "testsuite",
     "contrib/embassy/embassy",
     "contrib/embassy/embassy-traits",
     "contrib/embassy/embassy-macros",
@@ -21,23 +20,6 @@ members = [
     # nRF
     "contrib/embassy/embassy-nrf",
     "contrib/embassy/examples/nrf",
-
-    # stm32
-    #"embassy-stm32",
-    #"stm32-metapac",
-    # uncomment ONLY ONE example crate.
-    #"examples/stm32f4",
-    #"examples/stm32h7",
-    #"examples/stm32l0",
-    #"examples/stm32wb55",
-
-    # rp2040
-    #"embassy-rp",
-    #"examples/rp",
-
-    # std
-    #"embassy-std",
-    #"examples/std",
 ]
 
 
@@ -62,26 +44,12 @@ futures = { version = "0.3.8", default-features = false, features = ["async-awai
 lis3dh = {path = "contrib/lis3dh"}
 
 [features]
-# set logging levels here
-default = [
-  # "defmt-default",
-  # "dependency-a/defmt-trace",
-]
-
 async = [
   "embassy",
   "embassy-nrf",
   "ccs811-async",
   "lis3dh/async"
 ]
-
-# do NOT modify these features
-defmt-default = []
-defmt-trace = []
-defmt-debug = []
-defmt-info = []
-defmt-warn = []
-defmt-error = []
 
 # cargo build/run
 [profile.dev]
@@ -120,14 +88,6 @@ incremental = false
 lto = 'fat'
 opt-level = 3 # <-
 overflow-checks = false # <-
-
-# uncomment this to switch from the crates.io version of defmt to its git version
-# check app-template's README for instructions
-# [patch.crates-io]
-# defmt = { git = "https://github.com/knurling-rs/defmt", rev = "use defmt version reported by `probe-run --version`" }
-# defmt-rtt = { git = "https://github.com/knurling-rs/defmt", rev = "use defmt version reported by `probe-run --version`" }
-# defmt-test = { git = "https://github.com/knurling-rs/defmt", rev = "use defmt version reported by `probe-run --version`" }
-# panic-probe = { git = "https://github.com/knurling-rs/defmt", rev = "use defmt version reported by `probe-run --version`" }
 
 [[bin]]
 name = "tc_async"

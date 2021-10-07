@@ -1,6 +1,11 @@
 #![no_std]
 #![no_main]
 
+//! Constantly writes 'Hello\r\n' over UARTE0,
+//! using nrf52840-hal only for peripheral initialization.
+//! It configures the UARTE1 interrupt to be called
+//! when DMA transfer is done, and sleeps in between messages
+
 use cortex_m_rt::entry;
 use hal::{
     gpio::{p0::Parts, Level},

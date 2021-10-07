@@ -5,6 +5,9 @@
 #![feature(type_alias_impl_trait)]
 #![allow(incomplete_features)]
 
+//! Constantly writes 'Hello\r\n' over UARTE0,
+//! using embassy
+
 use embassy::executor::Spawner;
 use embassy::traits::uart::Write;
 use embassy_nrf::gpio::NoPin;
