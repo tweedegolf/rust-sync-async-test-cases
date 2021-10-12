@@ -12,7 +12,6 @@ members = [
     "contrib/embassy/embassy",
     "contrib/embassy/embassy-traits",
     "contrib/embassy/embassy-macros",
-    "contrib/embassy/embassy-extras",
 
     # Uncomment ONLY ONE of the groups below.
     "contrib/lis3dh",

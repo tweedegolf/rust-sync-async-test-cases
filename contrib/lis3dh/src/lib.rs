@@ -1,4 +1,3 @@
-#![feature(inherent_associated_types)]
 //! Platform-agnostic LIS3DH accelerometer driver which uses I²C or SPI via
 //! [embedded-hal]. This driver implements the [`Accelerometer`][acc-trait]
 //! and [`RawAccelerometer`][raw-trait] traits from the [accelerometer] crate.
@@ -14,10 +13,10 @@
 use core::convert::TryFrom;
 use core::fmt::Debug;
 
-#[cfg(feature="async")]
-pub mod asyncspi;
-#[cfg(feature="async")]
+#[cfg(feature = "async")]
 pub mod asynci2c;
+#[cfg(feature = "async")]
+pub mod asyncspi;
 pub mod i2c;
 pub mod spi;
 

@@ -189,8 +189,6 @@
 
 #![deny(unsafe_code)]
 #![no_std]
-#![feature(inherent_associated_types)]
-#![feature(min_type_alias_impl_trait)]
 #![feature(impl_trait_in_bindings)]
 #![feature(type_alias_impl_trait)]
 #![allow(incomplete_features)]
