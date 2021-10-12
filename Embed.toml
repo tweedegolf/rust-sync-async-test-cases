@@ -44,7 +44,7 @@ connect_under_reset = false
 
 [default.rtt]
 # Whether or not an RTTUI should be opened after flashing.
-enabled = true
+enabled = false
 # A list of channel associations to be displayed. If left empty, all channels are displayed.
 # formats are: String, Defmt, BinaryLE,
 channels = [

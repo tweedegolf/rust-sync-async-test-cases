@@ -9,6 +9,7 @@ set print pretty on
 break DefaultHandler
 break UserHardFault
 break rust_begin_unwind
+break ReseTrampoline
 
 # *try* to stop at the user entry point (it might be gone due to inlining)
 

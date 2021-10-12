@@ -1,11 +1,16 @@
-pub type SyncSensorCcs811<'a> = embedded_ccs811::Ccs811<
-    nrf52840_hal::twim::Twim<nrf52840_hal::pac::TWIM0>,
-    nrf52840_hal::gpio::Pin<nrf52840_hal::gpio::Output<nrf52840_hal::gpio::PushPull>>,
-    nrf52840_hal::Delay,
-    embedded_ccs811::mode::App,
->;
+use embedded_ccs811::{mode, Ccs811};
+use hal::pac;
+use nrf52840_hal::{
+    self as hal,
+    gpio::{Output, Pin, PushPull},
+    twim::Twim,
+    Delay,
+};
+use pac::TWIM0;
 
-pub type SyncSensorLis3dh = lis3dh::i2c::Lis3dh<nrf52840_hal::twim::Twim<nrf52840_hal::pac::TWIM1>>;
+pub type SyncSensorCcs811<'a> = Ccs811<Twim<TWIM0>, Pin<Output<PushPull>>, Delay, mode::App>;
+
+pub type SyncSensorLis3dh = lis3dh::i2c::Lis3dh<Twim<pac::TWIM1>>;
 
 pub fn go_to_sleep() -> ! {
     let sense_when_goes_to = Level::Low;
@@ -16,27 +21,22 @@ pub fn go_to_sleep() -> ! {
 
     cortex_m::asm::delay(100_000);
 
-    let stolen_p = unsafe { nrf52840_hal::pac::Peripherals::steal() };
+    let stolen_p = unsafe { pac::Peripherals::steal() };
     stolen_p.POWER.systemoff.write(|w| w.systemoff().set_bit());
 
-    cortex_m::asm::delay(1_000_000);
-
     loop {
-        cortex_m::asm::nop();
+        cortex_m::asm::wfi();
     }
 }
 
-// fn configure_ram(_: nrf52840_hal::pac::POWER) {
 pub fn configure_ram() {
-    let block = unsafe { &*nrf52840_hal::pac::POWER::ptr() };
+    let block = unsafe { &*pac::POWER::ptr() };
 
     block.ram7.power.write(|w| w.s1retention().on());
 }
 
 pub fn configure_sense_pin(id: usize, sense_when_goes_to: Level) {
-    let p0_register_block = nrf52840_hal::pac::P0::ptr();
-
-    cortex_m::peripheral::NVIC::mask(nrf52840_hal::pac::Interrupt::GPIOTE);
+    let p0_register_block = pac::P0::ptr();
 
     {
         unsafe { &(*p0_register_block).pin_cnf[id] }.write(|w| {
@@ -60,10 +60,6 @@ pub fn configure_sense_pin(id: usize, sense_when_goes_to: Level) {
             // Clear latch
             (*p0_register_block).latch.write(|w| w.bits(0xFFFF_FFFF));
         };
-    }
-
-    unsafe {
-        cortex_m::peripheral::NVIC::unmask(nrf52840_hal::pac::Interrupt::GPIOTE);
     }
 }
 
