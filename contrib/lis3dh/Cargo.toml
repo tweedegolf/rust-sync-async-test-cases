@@ -23,7 +23,7 @@ num_enum = { version = "0.5.1", default-features = false }
 defmt = "0.2.0"
 defmt-rtt = "0.2.0"
 
-embassy = { version = "0.1.0", path = "../embassy/embassy", features = ["defmt", "defmt-trace"], optional = true }
+embassy = { version = "0.1.0", path = "../embassy/embassy", features = ["defmt", "defmt-trace", "time", "time-tick-32768hz"], optional = true }
 embassy-traits = { version = "0.1.0", path = "../embassy/embassy-traits", features = ["defmt"], optional = true }
 embassy-nrf = { version = "0.1.0", path = "../embassy/embassy-nrf", features = ["defmt", "defmt-trace", "nrf52840"], optional = true }
 futures = { version = "0.3.8", default-features = false, features = ["async-await"], optional = true }

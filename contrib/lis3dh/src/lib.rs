@@ -8,6 +8,7 @@
 //! [raw-trait]: https://docs.rs/accelerometer/latest/accelerometer/trait.RawAccelerometer.html
 //!
 
+#![feature(inherent_associated_types)]
 #![no_std]
 
 use core::convert::TryFrom;

@@ -1,6 +1,6 @@
 #![feature(generic_associated_types)]
+#![feature(type_alias_impl_trait)]
 #![no_std]
-#![feature(min_type_alias_impl_trait)]
 
 use core::future::Future;
 use core::pin::Pin;

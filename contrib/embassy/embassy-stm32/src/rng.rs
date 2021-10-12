@@ -3,7 +3,8 @@
 use core::future::Future;
 use core::task::Poll;
 use embassy::traits;
-use embassy::util::{AtomicWaker, Unborrow};
+use embassy::util::Unborrow;
+use embassy::waitqueue::AtomicWaker;
 use embassy_hal_common::unborrow;
 use futures::future::poll_fn;
 use rand_core::{CryptoRng, RngCore};
@@ -19,11 +20,11 @@ pub enum Error {
     ClockError,
 }
 
-pub struct Random<T: Instance> {
+pub struct Rng<T: Instance> {
     _inner: T,
 }
 
-impl<T: Instance> Random<T> {
+impl<T: Instance> Rng<T> {
     pub fn new(inner: impl Unborrow<Target = T>) -> Self {
         T::enable();
         T::reset();
@@ -49,7 +50,7 @@ impl<T: Instance> Random<T> {
     }
 }
 
-impl<T: Instance> RngCore for Random<T> {
+impl<T: Instance> RngCore for Rng<T> {
     fn next_u32(&mut self) -> u32 {
         loop {
             let bits = unsafe { T::regs().sr().read() };
@@ -80,9 +81,9 @@ impl<T: Instance> RngCore for Random<T> {
     }
 }
 
-impl<T: Instance> CryptoRng for Random<T> {}
+impl<T: Instance> CryptoRng for Rng<T> {}
 
-impl<T: Instance> traits::rng::Rng for Random<T> {
+impl<T: Instance> traits::rng::Rng for Rng<T> {
     type Error = Error;
     #[rustfmt::skip]
     type RngFuture<'a> where Self: 'a = impl Future<Output=Result<(), Self::Error>> + 'a;

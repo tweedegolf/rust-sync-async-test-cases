@@ -6,7 +6,8 @@ use core::sync::atomic::{compiler_fence, Ordering};
 use core::task::{Context, Poll};
 use embassy::interrupt::InterruptExt;
 use embassy::io::{AsyncBufRead, AsyncWrite, Result};
-use embassy::util::{Unborrow, WakerRegistration};
+use embassy::util::Unborrow;
+use embassy::waitqueue::WakerRegistration;
 use embassy_hal_common::peripheral::{PeripheralMutex, PeripheralState, StateStorage};
 use embassy_hal_common::ring_buffer::RingBuffer;
 use embassy_hal_common::{low_power_wait_until, unborrow};
@@ -15,9 +16,8 @@ use crate::gpio::sealed::Pin as _;
 use crate::gpio::{OptionalPin as GpioOptionalPin, Pin as GpioPin};
 use crate::pac;
 use crate::ppi::{AnyConfigurableChannel, ConfigurableChannel, Event, Ppi, Task};
-use crate::timer::Frequency;
 use crate::timer::Instance as TimerInstance;
-use crate::timer::Timer;
+use crate::timer::{Frequency, Timer};
 use crate::uarte::{Config, Instance as UarteInstance};
 
 // Re-export SVD variants to allow user to directly set values
@@ -85,7 +85,7 @@ impl<'d, U: UarteInstance, T: TimerInstance> BufferedUarte<'d, U, T> {
 
         let r = U::regs();
 
-        let mut timer = Timer::new_irqless(timer);
+        let mut timer = Timer::new(timer);
 
         rxd.conf().write(|w| w.input().connect().drive().h0h1());
         r.psel.rxd.write(|w| unsafe { w.bits(rxd.psel_bits()) });

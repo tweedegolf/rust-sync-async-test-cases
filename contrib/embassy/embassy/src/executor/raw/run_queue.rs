@@ -24,7 +24,7 @@ impl RunQueueItem {
 /// null. Then the batch is iterated following the next pointers until null is reached.
 ///
 /// Note that batches will be iterated in the reverse order as they were enqueued. This is OK
-/// for our purposes: it can't crate fairness problems since the next batch won't run until the
+/// for our purposes: it can't create fairness problems since the next batch won't run until the
 /// current batch is completely processed, so even if a task enqueues itself instantly (for example
 /// by waking its own waker) can't prevent other tasks from running.
 pub(crate) struct RunQueue {
@@ -39,13 +39,17 @@ impl RunQueue {
     }
 
     /// Enqueues an item. Returns true if the queue was empty.
-    pub(crate) unsafe fn enqueue(&self, item: *mut TaskHeader) -> bool {
+    ///
+    /// # Safety
+    ///
+    /// `item` must NOT be already enqueued in any queue.
+    pub(crate) unsafe fn enqueue(&self, task: *mut TaskHeader) -> bool {
         let mut prev = self.head.load(Ordering::Acquire);
         loop {
-            (*item).run_queue_item.next.store(prev, Ordering::Relaxed);
+            (*task).run_queue_item.next.store(prev, Ordering::Relaxed);
             match self
                 .head
-                .compare_exchange_weak(prev, item, Ordering::AcqRel, Ordering::Acquire)
+                .compare_exchange_weak(prev, task, Ordering::AcqRel, Ordering::Acquire)
             {
                 Ok(_) => break,
                 Err(next_prev) => prev = next_prev,
@@ -55,17 +59,25 @@ impl RunQueue {
         prev.is_null()
     }
 
-    pub(crate) unsafe fn dequeue_all(&self, on_task: impl Fn(NonNull<TaskHeader>)) {
-        let mut task = self.head.swap(ptr::null_mut(), Ordering::AcqRel);
+    /// Empty the queue, then call `on_task` for each task that was in the queue.
+    /// NOTE: It is OK for `on_task` to enqueue more tasks. In this case they're left in the queue
+    /// and will be processed by the *next* call to `dequeue_all`, *not* the current one.
+    pub(crate) fn dequeue_all(&self, on_task: impl Fn(NonNull<TaskHeader>)) {
+        // Atomically empty the queue.
+        let mut ptr = self.head.swap(ptr::null_mut(), Ordering::AcqRel);
 
-        while !task.is_null() {
+        // Iterate the linked list of tasks that were previously in the queue.
+        while let Some(task) = NonNull::new(ptr) {
             // If the task re-enqueues itself, the `next` pointer will get overwritten.
             // Therefore, first read the next pointer, and only then process the task.
-            let next = (*task).run_queue_item.next.load(Ordering::Relaxed);
+            let next = unsafe { task.as_ref() }
+                .run_queue_item
+                .next
+                .load(Ordering::Relaxed);
 
-            on_task(NonNull::new_unchecked(task));
+            on_task(task);
 
-            task = next
+            ptr = next
         }
     }
 }

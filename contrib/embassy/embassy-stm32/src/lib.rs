@@ -2,7 +2,6 @@
 #![feature(generic_associated_types)]
 #![feature(asm)]
 #![feature(type_alias_impl_trait)]
-#![allow(incomplete_features)]
 
 #[cfg(feature = "unstable-pac")]
 pub use stm32_metapac as pac;
@@ -40,6 +39,8 @@ pub mod exti;
 #[cfg(i2c)]
 pub mod i2c;
 
+#[cfg(crc)]
+pub mod crc;
 #[cfg(pwr)]
 pub mod pwr;
 #[cfg(rng)]
@@ -50,6 +51,9 @@ pub mod sdmmc;
 pub mod spi;
 #[cfg(usart)]
 pub mod usart;
+
+#[cfg(feature = "subghz")]
+pub mod subghz;
 
 // This must go last, so that it sees all the impl_foo! macros defined earlier.
 mod generated {

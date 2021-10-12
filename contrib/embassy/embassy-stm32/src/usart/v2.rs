@@ -4,7 +4,8 @@ use core::marker::PhantomData;
 use core::pin::Pin;
 use core::task::Context;
 use core::task::Poll;
-use embassy::util::{Unborrow, WakerRegistration};
+use embassy::util::Unborrow;
+use embassy::waitqueue::WakerRegistration;
 use embassy_hal_common::peripheral::{PeripheralMutex, PeripheralState, StateStorage};
 use embassy_hal_common::ring_buffer::RingBuffer;
 use embassy_hal_common::unborrow;
@@ -12,6 +13,7 @@ use futures::TryFutureExt;
 
 use super::*;
 use crate::dma::NoDma;
+use crate::gpio::sealed::AFType::{OutputOpenDrain, OutputPushPull};
 use crate::pac::usart::{regs, vals};
 
 pub struct Uart<'d, T: Instance, TxDma = NoDma, RxDma = NoDma> {
@@ -41,8 +43,8 @@ impl<'d, T: Instance, TxDma, RxDma> Uart<'d, T, TxDma, RxDma> {
         let r = inner.regs();
 
         unsafe {
-            rx.set_as_af(rx.af_num());
-            tx.set_as_af(tx.af_num());
+            rx.set_as_af(rx.af_num(), OutputOpenDrain);
+            tx.set_as_af(tx.af_num(), OutputPushPull);
 
             r.cr2().write(|_w| {});
             r.cr3().write(|_w| {});

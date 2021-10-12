@@ -32,7 +32,7 @@ defmt-error = []
 embedded-hal = "0.2"
 nb = "1"
 embassy-traits = { version = "0.1.0", path = "../embassy/embassy-traits", features = ["defmt"] }
-embassy = { version = "0.1.0", path = "../embassy/embassy", features = ["defmt"] }
+embassy = { version = "0.1.0", path = "../embassy/embassy", features = ["defmt", "time", "time-tick-32768hz"] }
 
 defmt = { version = "0.2.0", optional = true }
 

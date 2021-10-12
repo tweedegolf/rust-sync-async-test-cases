@@ -189,7 +189,6 @@
 
 #![deny(unsafe_code)]
 #![no_std]
-#![feature(impl_trait_in_bindings)]
 #![feature(type_alias_impl_trait)]
 #![allow(incomplete_features)]
 

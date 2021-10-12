@@ -1,8 +1,11 @@
 #![macro_use]
 
 use crate::dma::NoDma;
-use crate::gpio::{sealed::Pin, AnyPin};
+use crate::gpio::sealed::AFType;
+use crate::gpio::sealed::Pin;
+use crate::gpio::{AnyPin, NoPin};
 use crate::pac::spi;
+use crate::peripherals;
 use crate::spi::{
     ByteOrder, Config, Error, Instance, MisoPin, MosiPin, RxDmaChannel, SckPin, TxDmaChannel,
     WordSize,
@@ -14,6 +17,7 @@ use core::ptr;
 use embassy::util::Unborrow;
 use embassy_hal_common::unborrow;
 use embassy_traits::spi as traits;
+pub use embedded_hal::blocking;
 pub use embedded_hal::spi::{Mode, Phase, Polarity, MODE_0, MODE_1, MODE_2, MODE_3};
 use futures::future::join3;
 
@@ -26,10 +30,29 @@ impl WordSize {
     }
 }
 
+macro_rules! impl_nopin {
+    ($inst:ident, $signal:ident) => {
+        impl $signal<peripherals::$inst> for NoPin {}
+
+        impl super::sealed::$signal<peripherals::$inst> for NoPin {
+            fn af_num(&self) -> u8 {
+                0
+            }
+        }
+    };
+}
+crate::pac::peripherals!(
+    (spi, $inst:ident) => {
+        impl_nopin!($inst, SckPin);
+        impl_nopin!($inst, MosiPin);
+        impl_nopin!($inst, MisoPin);
+    };
+);
+
 pub struct Spi<'d, T: Instance, Tx, Rx> {
-    sck: AnyPin,
-    mosi: AnyPin,
-    miso: AnyPin,
+    sck: Option<AnyPin>,
+    mosi: Option<AnyPin>,
+    miso: Option<AnyPin>,
     txdma: Tx,
     rxdma: Rx,
     current_word_size: WordSize,
@@ -52,15 +75,20 @@ impl<'d, T: Instance, Tx, Rx> Spi<'d, T, Tx, Rx> {
     {
         unborrow!(sck, mosi, miso, txdma, rxdma);
 
-        unsafe {
-            sck.set_as_af(sck.af_num());
-            mosi.set_as_af(mosi.af_num());
-            miso.set_as_af(miso.af_num());
-        }
+        let sck_af = sck.af_num();
+        let mosi_af = mosi.af_num();
+        let miso_af = miso.af_num();
+        let sck = sck.degrade_optional();
+        let mosi = mosi.degrade_optional();
+        let miso = miso.degrade_optional();
 
-        let sck = sck.degrade();
-        let mosi = mosi.degrade();
-        let miso = miso.degrade();
+        unsafe {
+            sck.as_ref()
+                .map(|x| x.set_as_af(sck_af, AFType::OutputPushPull));
+            mosi.as_ref()
+                .map(|x| x.set_as_af(mosi_af, AFType::OutputPushPull));
+            miso.as_ref().map(|x| x.set_as_af(miso_af, AFType::Input));
+        }
 
         unsafe {
             T::regs().cr2().modify(|w| {
@@ -97,6 +125,9 @@ impl<'d, T: Instance, Tx, Rx> Spi<'d, T, Tx, Rx> {
                 w.set_ssm(true);
                 w.set_crcen(false);
                 w.set_bidimode(spi::vals::Bidimode::UNIDIRECTIONAL);
+                if mosi.is_none() {
+                    w.set_rxonly(spi::vals::Rxonly::OUTPUTDISABLED);
+                }
                 w.set_dff(WordSize::EightBit.dff())
             });
         }
@@ -288,9 +319,9 @@ impl<'d, T: Instance, Tx, Rx> Spi<'d, T, Tx, Rx> {
 impl<'d, T: Instance, Tx, Rx> Drop for Spi<'d, T, Tx, Rx> {
     fn drop(&mut self) {
         unsafe {
-            self.sck.set_as_analog();
-            self.mosi.set_as_analog();
-            self.miso.set_as_analog();
+            self.sck.as_ref().map(|x| x.set_as_analog());
+            self.mosi.as_ref().map(|x| x.set_as_analog());
+            self.miso.as_ref().map(|x| x.set_as_analog());
         }
     }
 }
@@ -303,28 +334,8 @@ impl<'d, T: Instance> embedded_hal::blocking::spi::Write<u8> for Spi<'d, T, NoDm
         let regs = T::regs();
 
         for word in words.iter() {
-            while unsafe { !regs.sr().read().txe() } {
-                // spin
-            }
-            unsafe {
-                let dr = regs.dr().ptr() as *mut u8;
-                ptr::write_volatile(dr, *word);
-            }
-            loop {
-                let sr = unsafe { regs.sr().read() };
-                if sr.fre() {
-                    return Err(Error::Framing);
-                }
-                if sr.ovr() {
-                    return Err(Error::Overrun);
-                }
-                if sr.crcerr() {
-                    return Err(Error::Crc);
-                }
-                if !sr.txe() {
-                    // loop waiting for TXE
-                }
-            }
+            write_word(regs, *word)?;
+            let _: u8 = read_word(regs)?;
         }
 
         Ok(())
@@ -339,33 +350,8 @@ impl<'d, T: Instance> embedded_hal::blocking::spi::Transfer<u8> for Spi<'d, T, N
         let regs = T::regs();
 
         for word in words.iter_mut() {
-            while unsafe { !regs.sr().read().txe() } {
-                // spin
-            }
-            unsafe {
-                let dr = regs.dr().ptr() as *mut u8;
-                ptr::write_volatile(dr, *word);
-            }
-
-            while unsafe { !regs.sr().read().rxne() } {
-                // spin waiting for inbound to shift in.
-            }
-
-            unsafe {
-                let dr = regs.dr().ptr() as *const u8;
-                *word = ptr::read_volatile(dr);
-            }
-
-            let sr = unsafe { regs.sr().read() };
-            if sr.fre() {
-                return Err(Error::Framing);
-            }
-            if sr.ovr() {
-                return Err(Error::Overrun);
-            }
-            if sr.crcerr() {
-                return Err(Error::Crc);
-            }
+            write_word(regs, *word)?;
+            *word = read_word(regs)?;
         }
 
         Ok(words)
@@ -380,28 +366,8 @@ impl<'d, T: Instance> embedded_hal::blocking::spi::Write<u16> for Spi<'d, T, NoD
         let regs = T::regs();
 
         for word in words.iter() {
-            while unsafe { !regs.sr().read().txe() } {
-                // spin
-            }
-            unsafe {
-                let dr = regs.dr().ptr() as *mut u16;
-                ptr::write_volatile(dr, *word);
-            }
-            loop {
-                let sr = unsafe { regs.sr().read() };
-                if sr.fre() {
-                    return Err(Error::Framing);
-                }
-                if sr.ovr() {
-                    return Err(Error::Overrun);
-                }
-                if sr.crcerr() {
-                    return Err(Error::Crc);
-                }
-                if !sr.txe() {
-                    // loop waiting for TXE
-                }
-            }
+            write_word(regs, *word)?;
+            let _: u8 = read_word(regs)?;
         }
 
         Ok(())
@@ -416,31 +382,8 @@ impl<'d, T: Instance> embedded_hal::blocking::spi::Transfer<u16> for Spi<'d, T, 
         let regs = T::regs();
 
         for word in words.iter_mut() {
-            while unsafe { !regs.sr().read().txe() } {
-                // spin
-            }
-            unsafe {
-                let dr = regs.dr().ptr() as *mut u16;
-                ptr::write_volatile(dr, *word);
-            }
-            while unsafe { !regs.sr().read().rxne() } {
-                // spin waiting for inbound to shift in.
-            }
-            unsafe {
-                let dr = regs.dr().ptr() as *const u16;
-                *word = ptr::read_volatile(dr);
-            }
-
-            let sr = unsafe { regs.sr().read() };
-            if sr.fre() {
-                return Err(Error::Framing);
-            }
-            if sr.ovr() {
-                return Err(Error::Overrun);
-            }
-            if sr.crcerr() {
-                return Err(Error::Crc);
-            }
+            write_word(regs, *word)?;
+            *word = read_word(regs)?;
         }
 
         Ok(words)
@@ -483,5 +426,62 @@ impl<'d, T: Instance, Tx: TxDmaChannel<T>, Rx: RxDmaChannel<T>> traits::FullDupl
         write: &'a [u8],
     ) -> Self::WriteReadFuture<'a> {
         self.read_write_dma_u8(read, write)
+    }
+}
+
+trait Word {}
+
+impl Word for u8 {}
+impl Word for u16 {}
+
+fn write_word<W: Word>(regs: &'static crate::pac::spi::Spi, word: W) -> Result<(), Error> {
+    loop {
+        let sr = unsafe { regs.sr().read() };
+        if sr.ovr() {
+            return Err(Error::Overrun);
+        }
+        #[cfg(not(spi_f1))]
+        if sr.fre() {
+            return Err(Error::Framing);
+        }
+        if sr.modf() {
+            return Err(Error::ModeFault);
+        }
+        if sr.crcerr() {
+            return Err(Error::Crc);
+        }
+        if sr.txe() {
+            unsafe {
+                let dr = regs.dr().ptr() as *mut W;
+                ptr::write_volatile(dr, word);
+            }
+            return Ok(());
+        }
+    }
+}
+
+/// Read a single word blocking. Assumes word size have already been set.
+fn read_word<W: Word>(regs: &'static crate::pac::spi::Spi) -> Result<W, Error> {
+    loop {
+        let sr = unsafe { regs.sr().read() };
+        if sr.ovr() {
+            return Err(Error::Overrun);
+        }
+        #[cfg(not(spi_f1))]
+        if sr.fre() {
+            return Err(Error::Framing);
+        }
+        if sr.modf() {
+            return Err(Error::ModeFault);
+        }
+        if sr.crcerr() {
+            return Err(Error::Crc);
+        }
+        if sr.rxne() {
+            unsafe {
+                let dr = regs.dr().ptr() as *const W;
+                return Ok(ptr::read_volatile(dr));
+            }
+        }
     }
 }

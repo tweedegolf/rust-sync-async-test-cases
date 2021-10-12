@@ -2,14 +2,15 @@ use core::marker::PhantomData;
 use core::sync::atomic::{fence, Ordering};
 use core::task::Waker;
 
-use embassy::util::{AtomicWaker, Unborrow};
+use embassy::util::Unborrow;
+use embassy::waitqueue::AtomicWaker;
 use embassy_hal_common::peripheral::{PeripheralMutex, PeripheralState, StateStorage};
 use embassy_hal_common::unborrow;
 use embassy_net::{Device, DeviceCapabilities, LinkState, PacketBuf, MTU};
 
 use crate::gpio::sealed::Pin as __GpioPin;
-use crate::gpio::AnyPin;
 use crate::gpio::Pin as GpioPin;
+use crate::gpio::{sealed::AFType::OutputPushPull, AnyPin};
 use crate::pac::gpio::vals::Ospeedr;
 use crate::pac::{ETH, RCC, SYSCFG};
 use crate::peripherals;
@@ -98,6 +99,10 @@ impl<'d, P: PHY, const TX: usize, const RX: usize> Ethernet<'d, P, TX, RX> {
             // TODO: Carrier sense ? ECRSFD
         });
 
+        // Note: Writing to LR triggers synchronisation of both LR and HR into the MAC core,
+        // so the LR write must happen after the HR write.
+        mac.maca0hr()
+            .modify(|w| w.set_addrhi(u16::from(mac_addr[4]) | (u16::from(mac_addr[5]) << 8)));
         mac.maca0lr().write(|w| {
             w.set_addrlo(
                 u32::from(mac_addr[0])
@@ -106,10 +111,7 @@ impl<'d, P: PHY, const TX: usize, const RX: usize> Ethernet<'d, P, TX, RX> {
                     | (u32::from(mac_addr[3]) << 24),
             )
         });
-        mac.maca0hr()
-            .modify(|w| w.set_addrhi(u16::from(mac_addr[4]) | (u16::from(mac_addr[5]) << 8)));
 
-        mac.macpfr().modify(|w| w.set_saf(true));
         mac.macqtx_fcr().modify(|w| w.set_pt(0x100));
 
         mtl.mtlrx_qomr().modify(|w| w.set_rsf(true));
@@ -414,7 +416,7 @@ macro_rules! impl_pin {
             fn configure(&mut self) {
                 // NOTE(unsafe) Exclusive access to the registers
                 critical_section::with(|_| unsafe {
-                    self.set_as_af($af);
+                    self.set_as_af($af, OutputPushPull);
                     self.block()
                         .ospeedr()
                         .modify(|w| w.set_ospeedr(self.pin() as usize, Ospeedr::VERYHIGHSPEED));

@@ -1,30 +1,29 @@
 #![no_std]
 #![no_main]
 #![feature(type_alias_impl_trait)]
-#![allow(incomplete_features)]
 
 #[path = "../example_common.rs"]
 mod example_common;
 
 use defmt::unwrap;
+use embassy::blocking_mutex::kind::Noop;
+use embassy::channel::mpsc::{self, Channel, Sender, TryRecvError};
 use embassy::executor::Spawner;
 use embassy::time::{Duration, Timer};
-use embassy::util::mpsc::TryRecvError;
-use embassy::util::{mpsc, Forever};
+use embassy::util::Forever;
 use embassy_nrf::gpio::{Level, Output, OutputDrive};
 use embassy_nrf::Peripherals;
 use embedded_hal::digital::v2::OutputPin;
-use mpsc::{Channel, Sender, WithNoThreads};
 
 enum LedState {
     On,
     Off,
 }
 
-static CHANNEL: Forever<Channel<WithNoThreads, LedState, 1>> = Forever::new();
+static CHANNEL: Forever<Channel<Noop, LedState, 1>> = Forever::new();
 
 #[embassy::task(pool_size = 1)]
-async fn my_task(sender: Sender<'static, WithNoThreads, LedState, 1>) {
+async fn my_task(sender: Sender<'static, Noop, LedState, 1>) {
     loop {
         let _ = sender.send(LedState::On).await;
         Timer::after(Duration::from_secs(1)).await;

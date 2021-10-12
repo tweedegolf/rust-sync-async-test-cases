@@ -18,6 +18,7 @@ pub enum Pull {
     Down,
 }
 
+#[cfg(gpio_v2)]
 impl From<Pull> for vals::Pupdr {
     fn from(pull: Pull) -> Self {
         use Pull::*;
@@ -36,11 +37,25 @@ impl From<Pull> for vals::Pupdr {
 pub enum Speed {
     Low,
     Medium,
-    #[cfg(not(syscfg_f0))]
+    #[cfg(not(any(syscfg_f0, gpio_v1)))]
     High,
     VeryHigh,
 }
 
+#[cfg(gpio_v1)]
+impl From<Speed> for vals::Mode {
+    fn from(speed: Speed) -> Self {
+        use Speed::*;
+
+        match speed {
+            Low => vals::Mode::OUTPUT2,
+            Medium => vals::Mode::OUTPUT,
+            VeryHigh => vals::Mode::OUTPUT50,
+        }
+    }
+}
+
+#[cfg(gpio_v2)]
 impl From<Speed> for vals::Ospeedr {
     fn from(speed: Speed) -> Self {
         use Speed::*;
@@ -68,9 +83,29 @@ impl<'d, T: Pin> Input<'d, T> {
         cortex_m::interrupt::free(|_| unsafe {
             let r = pin.block();
             let n = pin.pin() as usize;
-            r.pupdr().modify(|w| w.set_pupdr(n, pull.into()));
-            r.otyper().modify(|w| w.set_ot(n, vals::Ot::PUSHPULL));
-            r.moder().modify(|w| w.set_moder(n, vals::Moder::INPUT));
+            #[cfg(gpio_v1)]
+            {
+                let crlh = if n < 8 { 0 } else { 1 };
+                match pull {
+                    Pull::Up => r.bsrr().write(|w| w.set_bs(n, true)),
+                    Pull::Down => r.bsrr().write(|w| w.set_br(n, true)),
+                    Pull::None => {}
+                }
+                if pull == Pull::None {
+                    r.cr(crlh)
+                        .modify(|w| w.set_cnf(n % 8, vals::Cnf::OPENDRAIN));
+                } else {
+                    r.cr(crlh)
+                        .modify(|w| w.set_cnf(n % 8, vals::Cnf::ALTPUSHPULL));
+                }
+                r.cr(crlh).modify(|w| w.set_mode(n % 8, vals::Mode::INPUT));
+            }
+            #[cfg(gpio_v2)]
+            {
+                r.pupdr().modify(|w| w.set_pupdr(n, pull.into()));
+                r.otyper().modify(|w| w.set_ot(n, vals::Ot::PUSHPULL));
+                r.moder().modify(|w| w.set_moder(n, vals::Moder::INPUT));
+            }
         });
 
         Self {
@@ -85,6 +120,13 @@ impl<'d, T: Pin> Drop for Input<'d, T> {
         cortex_m::interrupt::free(|_| unsafe {
             let r = self.pin.block();
             let n = self.pin.pin() as usize;
+            #[cfg(gpio_v1)]
+            {
+                let crlh = if n < 8 { 0 } else { 1 };
+                r.cr(crlh)
+                    .modify(|w| w.set_cnf(n % 8, vals::Cnf::OPENDRAIN));
+            }
+            #[cfg(gpio_v2)]
             r.pupdr().modify(|w| w.set_pupdr(n, vals::Pupdr::FLOATING));
         });
     }
@@ -129,10 +171,19 @@ impl<'d, T: Pin> Output<'d, T> {
         cortex_m::interrupt::free(|_| unsafe {
             let r = pin.block();
             let n = pin.pin() as usize;
-            r.pupdr().modify(|w| w.set_pupdr(n, vals::Pupdr::FLOATING));
-            r.moder().modify(|w| w.set_moder(n, vals::Moder::OUTPUT));
-            r.otyper().modify(|w| w.set_ot(n, vals::Ot::PUSHPULL));
-            pin.set_speed(speed);
+            #[cfg(gpio_v1)]
+            {
+                let crlh = if n < 8 { 0 } else { 1 };
+                r.cr(crlh).modify(|w| w.set_cnf(n % 8, vals::Cnf::PUSHPULL));
+                r.cr(crlh).modify(|w| w.set_mode(n % 8, speed.into()));
+            }
+            #[cfg(gpio_v2)]
+            {
+                r.pupdr().modify(|w| w.set_pupdr(n, vals::Pupdr::FLOATING));
+                r.otyper().modify(|w| w.set_ot(n, vals::Ot::PUSHPULL));
+                pin.set_speed(speed);
+                r.moder().modify(|w| w.set_moder(n, vals::Moder::OUTPUT));
+            }
         });
 
         Self {
@@ -147,8 +198,18 @@ impl<'d, T: Pin> Drop for Output<'d, T> {
         cortex_m::interrupt::free(|_| unsafe {
             let r = self.pin.block();
             let n = self.pin.pin() as usize;
-            r.pupdr().modify(|w| w.set_pupdr(n, vals::Pupdr::FLOATING));
-            r.moder().modify(|w| w.set_moder(n, vals::Moder::INPUT));
+            #[cfg(gpio_v1)]
+            {
+                let crlh = if n < 8 { 0 } else { 1 };
+                r.cr(crlh)
+                    .modify(|w| w.set_cnf(n % 8, vals::Cnf::OPENDRAIN));
+                r.cr(crlh).modify(|w| w.set_mode(n % 8, vals::Mode::INPUT));
+            }
+            #[cfg(gpio_v2)]
+            {
+                r.pupdr().modify(|w| w.set_pupdr(n, vals::Pupdr::FLOATING));
+                r.moder().modify(|w| w.set_moder(n, vals::Moder::INPUT));
+            }
         });
     }
 }
@@ -207,10 +268,25 @@ impl<'d, T: Pin> OutputOpenDrain<'d, T> {
         cortex_m::interrupt::free(|_| unsafe {
             let r = pin.block();
             let n = pin.pin() as usize;
-            r.pupdr().modify(|w| w.set_pupdr(n, pull.into()));
-            r.moder().modify(|w| w.set_moder(n, vals::Moder::OUTPUT));
-            r.otyper().modify(|w| w.set_ot(n, vals::Ot::OPENDRAIN));
-            pin.set_speed(speed);
+            #[cfg(gpio_v1)]
+            {
+                let crlh = if n < 8 { 0 } else { 1 };
+                match pull {
+                    Pull::Up => r.bsrr().write(|w| w.set_bs(n, true)),
+                    Pull::Down => r.bsrr().write(|w| w.set_br(n, true)),
+                    Pull::None => {}
+                }
+                r.cr(crlh).modify(|w| w.set_mode(n % 8, speed.into()));
+                r.cr(crlh)
+                    .modify(|w| w.set_cnf(n % 8, vals::Cnf::OPENDRAIN));
+            }
+            #[cfg(gpio_v2)]
+            {
+                r.pupdr().modify(|w| w.set_pupdr(n, pull.into()));
+                r.otyper().modify(|w| w.set_ot(n, vals::Ot::OPENDRAIN));
+                pin.set_speed(speed);
+                r.moder().modify(|w| w.set_moder(n, vals::Moder::OUTPUT));
+            }
         });
 
         Self {
@@ -225,8 +301,18 @@ impl<'d, T: Pin> Drop for OutputOpenDrain<'d, T> {
         cortex_m::interrupt::free(|_| unsafe {
             let r = self.pin.block();
             let n = self.pin.pin() as usize;
-            r.pupdr().modify(|w| w.set_pupdr(n, vals::Pupdr::FLOATING));
-            r.moder().modify(|w| w.set_moder(n, vals::Moder::INPUT));
+            #[cfg(gpio_v1)]
+            {
+                let crlh = if n < 8 { 0 } else { 1 };
+                r.cr(crlh)
+                    .modify(|w| w.set_cnf(n % 8, vals::Cnf::OPENDRAIN));
+                r.cr(crlh).modify(|w| w.set_mode(n % 8, vals::Mode::INPUT));
+            }
+            #[cfg(gpio_v2)]
+            {
+                r.pupdr().modify(|w| w.set_pupdr(n, vals::Pupdr::FLOATING));
+                r.moder().modify(|w| w.set_moder(n, vals::Moder::INPUT));
+            }
         });
     }
 }
@@ -264,6 +350,15 @@ impl<'d, T: Pin> InputPin for OutputOpenDrain<'d, T> {
 pub(crate) mod sealed {
     use super::*;
 
+    /// Alternate function type settings
+    #[derive(Debug)]
+    #[cfg_attr(feature = "defmt", derive(defmt::Format))]
+    pub enum AFType {
+        Input,
+        OutputPushPull,
+        OutputOpenDrain,
+    }
+
     pub trait Pin {
         fn pin_port(&self) -> u8;
 
@@ -299,25 +394,80 @@ pub(crate) mod sealed {
             }
         }
 
-        unsafe fn set_as_af(&self, af_num: u8) {
+        #[cfg(gpio_v1)]
+        unsafe fn set_as_af(&self, _af_num: u8, af_type: AFType) {
+            // F1 uses the AFIO register for remapping.
+            // For now, this is not implemented, so af_num is ignored
+            // _af_num should be zero here, since it is not set by stm32-data
+            let r = self.block();
+            let n = self._pin() as usize;
+            let crlh = if n < 8 { 0 } else { 1 };
+            match af_type {
+                AFType::Input => {
+                    r.cr(crlh).modify(|w| {
+                        w.set_mode(n % 8, vals::Mode::INPUT);
+                        w.set_cnf(n % 8, vals::Cnf::PUSHPULL);
+                    });
+                }
+                AFType::OutputPushPull => {
+                    r.cr(crlh).modify(|w| {
+                        w.set_mode(n % 8, vals::Mode::OUTPUT50);
+                        w.set_cnf(n % 8, vals::Cnf::ALTPUSHPULL);
+                    });
+                }
+                AFType::OutputOpenDrain => {
+                    r.cr(crlh).modify(|w| {
+                        w.set_mode(n % 8, vals::Mode::OUTPUT50);
+                        w.set_cnf(n % 8, vals::Cnf::ALTOPENDRAIN);
+                    });
+                }
+            }
+        }
+        #[cfg(gpio_v2)]
+        unsafe fn set_as_af(&self, af_num: u8, af_type: AFType) {
             let pin = self._pin() as usize;
             let block = self.block();
             block
-                .moder()
-                .modify(|w| w.set_moder(pin, vals::Moder::ALTERNATE));
-            block
                 .afr(pin / 8)
                 .modify(|w| w.set_afr(pin % 8, vals::Afr(af_num)));
+            match af_type {
+                AFType::Input => {}
+                AFType::OutputPushPull => {
+                    block.otyper().modify(|w| w.set_ot(pin, vals::Ot::PUSHPULL))
+                }
+                AFType::OutputOpenDrain => block
+                    .otyper()
+                    .modify(|w| w.set_ot(pin, vals::Ot::OPENDRAIN)),
+            }
+            block
+                .pupdr()
+                .modify(|w| w.set_pupdr(pin, vals::Pupdr::FLOATING));
+
+            block
+                .moder()
+                .modify(|w| w.set_moder(pin, vals::Moder::ALTERNATE));
         }
 
         unsafe fn set_as_analog(&self) {
             let pin = self._pin() as usize;
             let block = self.block();
+            #[cfg(gpio_v1)]
+            {
+                let crlh = if pin < 8 { 0 } else { 1 };
+                block
+                    .cr(crlh)
+                    .modify(|w| w.set_cnf(pin % 8, vals::Cnf::PUSHPULL));
+                block
+                    .cr(crlh)
+                    .modify(|w| w.set_mode(pin % 8, vals::Mode::INPUT));
+            }
+            #[cfg(gpio_v2)]
             block
                 .moder()
                 .modify(|w| w.set_moder(pin, vals::Moder::ANALOG));
         }
 
+        #[cfg(gpio_v2)]
         unsafe fn set_speed(&self, speed: Speed) {
             let pin = self._pin() as usize;
             self.block()

@@ -8,7 +8,8 @@ use core::sync::atomic::{compiler_fence, Ordering};
 use core::task::Poll;
 use embassy::interrupt::InterruptExt;
 use embassy::traits::uart::{Error, Read, ReadUntilIdle, Write};
-use embassy::util::{AtomicWaker, OnDrop, Unborrow};
+use embassy::util::Unborrow;
+use embassy_hal_common::drop::OnDrop;
 use embassy_hal_common::unborrow;
 use futures::future::poll_fn;
 
@@ -18,9 +19,8 @@ use crate::gpio::{self, OptionalPin as GpioOptionalPin, Pin as GpioPin};
 use crate::interrupt::Interrupt;
 use crate::pac;
 use crate::ppi::{AnyConfigurableChannel, ConfigurableChannel, Event, Ppi, Task};
-use crate::timer::Frequency;
 use crate::timer::Instance as TimerInstance;
-use crate::timer::Timer;
+use crate::timer::{Frequency, Timer};
 
 // Re-export SVD variants to allow user to directly set values.
 pub use pac::uarte0::{baudrate::BAUDRATE_A as Baudrate, config::PARITY_A as Parity};
@@ -318,7 +318,7 @@ impl<'d, U: Instance, T: TimerInstance> UarteWithIdle<'d, U, T> {
     ) -> Self {
         let baudrate = config.baudrate;
         let uarte = Uarte::new(uarte, irq, rxd, txd, cts, rts, config);
-        let mut timer = Timer::new_irqless(timer);
+        let mut timer = Timer::new(timer);
 
         unborrow!(ppi_ch1, ppi_ch2);
 
@@ -440,6 +440,8 @@ impl<'d, U: Instance, T: TimerInstance> Write for UarteWithIdle<'d, U, T> {
 }
 
 pub(crate) mod sealed {
+    use embassy::waitqueue::AtomicWaker;
+
     use super::*;
 
     pub struct State {

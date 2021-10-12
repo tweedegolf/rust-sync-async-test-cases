@@ -30,7 +30,7 @@ where
     NSS: AsyncOutputPin<Error = ENSS> + Unpin,
     DELAY: Delay,
 {
-    type ESPI = <SPI as embassy_traits::spi::FullDuplex<u8>>::Error;
+    type ESPI = <SPI as embassy_traits::spi::Spi<u8>>::Error;
 
     pub async fn new(
         spi: SPI,

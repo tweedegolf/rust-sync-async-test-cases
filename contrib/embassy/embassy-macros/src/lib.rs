@@ -115,12 +115,12 @@ pub fn task(args: TokenStream, item: TokenStream) -> TokenStream {
     let result = quote! {
         #(#attrs)*
         #visibility fn #name(#args) -> #embassy_path::executor::SpawnToken<#impl_ty> {
-            use #embassy_path::executor::raw::Task;
+            use #embassy_path::executor::raw::TaskStorage;
             #task_fn
             type F = #impl_ty;
-            const NEW_TASK: Task<F> = Task::new();
-            static POOL: [Task<F>; #pool_size] = [NEW_TASK; #pool_size];
-            unsafe { Task::spawn_pool(&POOL, move || task(#arg_names)) }
+            const NEW_TASK: TaskStorage<F> = TaskStorage::new();
+            static POOL: [TaskStorage<F>; #pool_size] = [NEW_TASK; #pool_size];
+            unsafe { TaskStorage::spawn_pool(&POOL, move || task(#arg_names)) }
         }
     };
     result.into()
@@ -386,7 +386,6 @@ pub fn main(args: TokenStream, item: TokenStream) -> TokenStream {
     };
 
     let embassy_path = macro_args.embassy_prefix.append("embassy");
-    let embassy_std_path = macro_args.embassy_prefix.append("embassy_std");
 
     let mut fail = false;
     if task_fn.sig.asyncness.is_none() {
@@ -427,7 +426,6 @@ pub fn main(args: TokenStream, item: TokenStream) -> TokenStream {
     let task_fn_body = task_fn.block.clone();
 
     let embassy_path = embassy_path.path();
-    let embassy_std_path = embassy_std_path.path();
     let embassy_prefix_lit = macro_args.embassy_prefix.literal();
 
     let result = quote! {
@@ -441,13 +439,92 @@ pub fn main(args: TokenStream, item: TokenStream) -> TokenStream {
                 ::core::mem::transmute(t)
             }
 
-            let mut executor = #embassy_std_path::Executor::new();
+            let mut executor = #embassy_path::executor::Executor::new();
             let executor = unsafe { make_static(&mut executor) };
 
             executor.run(|spawner| {
                 spawner.spawn(__embassy_main(spawner)).unwrap();
             })
 
+        }
+    };
+    result.into()
+}
+
+#[cfg(feature = "wasm")]
+#[proc_macro_attribute]
+pub fn main(args: TokenStream, item: TokenStream) -> TokenStream {
+    let macro_args = syn::parse_macro_input!(args as syn::AttributeArgs);
+    let task_fn = syn::parse_macro_input!(item as syn::ItemFn);
+
+    let macro_args = match MainArgs::from_list(&macro_args) {
+        Ok(v) => v,
+        Err(e) => {
+            return TokenStream::from(e.write_errors());
+        }
+    };
+
+    let embassy_path = macro_args.embassy_prefix.append("embassy");
+
+    let mut fail = false;
+    if task_fn.sig.asyncness.is_none() {
+        task_fn
+            .sig
+            .span()
+            .unwrap()
+            .error("task functions must be async")
+            .emit();
+        fail = true;
+    }
+    if !task_fn.sig.generics.params.is_empty() {
+        task_fn
+            .sig
+            .span()
+            .unwrap()
+            .error("main function must not be generic")
+            .emit();
+        fail = true;
+    }
+
+    let args = task_fn.sig.inputs.clone();
+
+    if args.len() != 1 {
+        task_fn
+            .sig
+            .span()
+            .unwrap()
+            .error("main function must have one argument")
+            .emit();
+        fail = true;
+    }
+
+    if fail {
+        return TokenStream::new();
+    }
+
+    let task_fn_body = task_fn.block.clone();
+
+    let embassy_path = embassy_path.path();
+    let embassy_prefix_lit = macro_args.embassy_prefix.literal();
+
+    let result = quote! {
+        #[#embassy_path::task(embassy_prefix = #embassy_prefix_lit)]
+        async fn __embassy_main(#args) {
+            #task_fn_body
+        }
+
+        use wasm_bindgen::prelude::*;
+
+        #[wasm_bindgen(start)]
+        pub fn main() -> Result<(), JsValue> {
+            static EXECUTOR: #embassy_path::util::Forever<#embassy_path::executor::Executor> = #embassy_path::util::Forever::new();
+            let executor = EXECUTOR.put(#embassy_path::executor::Executor::new());
+
+            executor.start(|spawner| {
+                spawner.spawn(__embassy_main(spawner)).unwrap();
+            });
+
+            Ok(())
         }
     };
     result.into()
