@@ -1,0 +1,49 @@
+[package]
+name = "embassy-net"
+version = "0.1.0"
+authors = ["Dario Nieuwenhuis <dirbaio@dirbaio.net>"]
+edition = "2018"
+
+[features]
+default = ["pool-4"]
+std = []
+defmt-trace = []
+defmt-debug = []
+defmt-info = []
+defmt-warn = []
+defmt-error = []
+
+tcp = ["smoltcp/socket-tcp"]
+dhcpv4 = ["medium-ethernet", "smoltcp/socket-dhcpv4"]
+medium-ethernet = ["smoltcp/medium-ethernet"]
+medium-ip = ["smoltcp/medium-ip"]
+
+pool-4 = []
+pool-8 = []
+pool-16 = []
+pool-32 = []
+
+[dependencies]
+
+defmt = { version = "0.2.0", optional = true }
+log = { version = "0.4.11", optional = true }
+
+embassy             = { version = "0.1.0", path = "../embassy" }
+
+managed             = { version = "0.8.0", default-features = false, features = [ "map" ]}
+heapless            = { version = "0.7.1", default-features = false }
+as-slice            = { version = "0.1.4" }
+generic-array       = { version = "0.14.4", default-features = false }
+stable_deref_trait  = { version = "1.2.0", default-features = false }
+futures             = { version = "0.3.5", default-features = false, features = [ "async-await" ]}
+atomic-pool = "0.2.0"
+
+[dependencies.smoltcp]
+git = "https://github.com/smoltcp-rs/smoltcp"
+rev = "e4241510337e095b9d21136c5f58b2eaa1b78479"
+default-features = false
+features = [
+  "proto-ipv4",
+  "socket",
+  "async",
+]
