@@ -1,6 +1,11 @@
 #![no_std]
 #![no_main]
 
+//! This pogram is for visualizing the different levels of power
+//! consumption in various modes. It starts with busy waiting,
+//! goes to sleep after 500k cycles, and to SYSTEM OFF mode 
+//! after another 500k cycles.
+
 use core::{
     mem::MaybeUninit,
     sync::atomic::{AtomicBool, Ordering},
@@ -15,7 +20,6 @@ use hal::{
 };
 use nrf52840_hal as hal; // memory layout
 use panic_halt as _;
-// use sleepy_test_case as _;
 
 static mut TIMER0_HANDLE: MaybeUninit<Timer<pac::TIMER0, Periodic>> = MaybeUninit::uninit();
 static TIMER0_FIRED: AtomicBool = AtomicBool::new(false);

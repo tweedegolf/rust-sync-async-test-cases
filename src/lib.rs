@@ -1,5 +1,7 @@
 #![no_std]
 
+//! Generated using Knurling-rs
+
 pub mod ram_persisted;
 pub mod test_case_common;
 #[cfg(feature = "async")]

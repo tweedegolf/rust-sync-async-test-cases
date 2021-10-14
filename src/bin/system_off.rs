@@ -1,6 +1,8 @@
 #![no_std]
 #![no_main]
 
+//! Simple program that goes to SYSTEM OFF mode immediately
+
 use cortex_m_rt::entry;
 use nrf52840_hal::pac;
 use panic_halt as _; // memory layout

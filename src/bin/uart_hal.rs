@@ -1,6 +1,9 @@
 #![no_std]
 #![no_main]
 
+//! Constantly writes 'Hello\r\n' over UARTE0,
+//! using nrf52840-hal naively
+
 use cortex_m_rt::entry;
 use hal::{
     gpio::{p0::Parts, Level},

@@ -1,6 +1,8 @@
 #![no_std]
 #![no_main]
 
+//! Only enables TWIM0 and TWIM1 peripherals, then goes to sleep
+
 use cortex_m_rt::entry;
 use hal::{gpio::p0::Parts, pac, twim};
 use nrf52840_hal as hal;
